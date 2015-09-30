@@ -1,0 +1,8 @@
+
+testing:
+    build: .
+    dockerfile: Dockerfile-Testing
+    volumes:
+    - ./src/index.js:/wsdlrdr/src/index.js
+    - ./tests:/wsdlrdr/tests
+    - ./package.json:/wsdlrdr/package.json
