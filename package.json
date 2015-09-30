@@ -1,7 +1,7 @@
 {
   "name": "wsdlrdr",
-  "version": "0.1.1",
-  "description": "a simple wsdl parser",
+  "version": "0.1.2",
+  "description": "a simple wsdl parser, with promises",
   "main": "/src/index.js",
   "dependencies": {
     "request": "^2.64.0",
