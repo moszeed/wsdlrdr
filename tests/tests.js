@@ -6,15 +6,15 @@
 
     var wsdlUrls = [
         [{ host: 'www.predic8.com:8080', wsdl: '/base/IDService?wsdl' }, { secure: false }],
-        //[{ host: 'www.webservicex.net', wsdl: '/globalweather.asmx?WSDL' }, { secure: false }],
+        [{ host: 'www.webservicex.net', wsdl: '/globalweather.asmx?WSDL' }, { secure: false }],
         [{ host: 'soaptest.parasoft.com', wsdl: '/calculator.wsdl' }, { secure: false }],
-        //[{ host: 'webservices.oorsprong.org', wsdl: '/websamples.countryinfo/CountryInfoService.wso?WSDL'},
-        // {secure: false}],
-        //[{ host: 'www.dat.de:80', wsdl: '/VehicleRepairOnline/services/VehicleIdentificationService?wsdl' },
-        // { secure: false }],
+        [{ host: 'webservices.oorsprong.org', wsdl: '/websamples.countryinfo/CountryInfoService.wso?WSDL'},
+         {secure: false}],
+        [{ host: 'www.dat.de:80', wsdl: '/VehicleRepairOnline/services/VehicleIdentificationService?wsdl' },
+         { secure: false }],
         [{ host: 'www.car-copy.com', wsdl: '/ws/caratlas/ca_v2_soap.php?class=CAWS_CA&wsdl' }, {}],
-        //[{ host: 'webservices.daehosting.com', wsdl: '/services/isbnservice.wso?WSDL'}, { secure: false }],
-        //[{ host: 'www.dataaccess.com', wsdl: '/webservicesserver/numberconversion.wso?WSDL'}, { secure: false}]
+        [{ host: 'webservices.daehosting.com', wsdl: '/services/isbnservice.wso?WSDL'}, { secure: false }],
+        [{ host: 'www.dataaccess.com', wsdl: '/webservicesserver/numberconversion.wso?WSDL'}, { secure: false}]
     ];
 
     function executeSequentially(promiseFactories) {
@@ -67,8 +67,7 @@
                         promiseFactory.push(() => {
                             return Wsdlrdr.getMethodParamsByName(methodName, wsdlParams[0], wsdlParams[1])
                                 .then((data) => {
-                                    console.log(data);
-                                    //t.ok(data, 'could get params from method "' + methodName + '"');
+                                    t.ok(data, 'could get params from method "' + methodName + '"');
                                 })
                                 .catch((err) => {
                                     t.fail(err);
