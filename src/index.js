@@ -15,8 +15,12 @@
     function getProtocol(opts) {
 
         opts = opts || {};
-        return (opts.secure === void 0 ||
-                opts.secure === true) ? 'https://' : 'http://';
+
+        if (opts.secure === void 0) {
+            opts.secure === false;
+        }
+
+        return (opts.secure === true) ? 'https://' : 'http://';
     }
 
     function doGetRequest(params, opts) {
@@ -110,6 +114,26 @@
     }
 
 
+    function getFormatedAttr(attr) {
+
+        var namespace = '';
+        if (attr.type) {
+            attr.type = getNameWithoutNamespace(attr.type);
+            namespace = getNamespace(attr.type);
+        }
+
+        if (attr.element) {
+            attr.element = getNameWithoutNamespace(attr.element);
+            namespace    = getNamespace(attr.element);
+        }
+
+        if (namespace.length !== 0) {
+            attr.namespace = namespace;
+        }
+
+        return attr;
+    }
+
     function getComplexTypeAttrs($complexType) {
 
         var schemaStruct = getNamespace($complexType.children[0].name, true);
@@ -117,20 +141,11 @@
         var $sequence = $complexType.childNamed(schemaStruct + 'sequence');
         if ($sequence) {
             return _.map($sequence.children, ($seqChild) => {
-
-                if ($seqChild.attr.type) {
-                    $seqChild.attr.type = getNameWithoutNamespace($seqChild.attr.type);
-                }
-
-                return $seqChild.attr;
+                return getFormatedAttr($seqChild.attr);
             });
         }
 
-        if ($complexType.attr.type) {
-            $complexType.attr.type = getNameWithoutNamespace($complexType.attr.type);
-        }
-
-        return $complexType.attr;
+        return getFormatedAttr($complexType.attr);
     }
 
     function getMessageAttrs($message, $wsdl) {
@@ -143,11 +158,15 @@
         var $schema         = $types.childNamed(typesStruct + 'schema');
         var $complexTypes   = $schema.childrenNamed(typesStruct + 'complexType');
 
-        return _.flatten(_.map($message.children,
+        return _.map($message.children,
             ($messageChild) => {
 
                 var messageAttr   = $messageChild.attr;
                 var typeName      = getNameWithoutNamespace(messageAttr.type || messageAttr.element);
+                var returnData    = {
+                    name     : messageAttr.name,
+                    namespace: getNamespace(messageAttr.type || messageAttr.element)
+                };
 
                 //
                 // first look if schema exists
@@ -158,13 +177,15 @@
                 if ($methodSchema) {
 
                     if ($methodSchema.children.length === 0) {
-                        return $methodSchema.attr;
+                        return _.extend(returnData, getFormatedAttr($methodSchema.attr));
                     }
 
                     // is complex type
                     var $methodComplexType = $methodSchema.childNamed(typesStruct + 'complexType');
                     if ($methodComplexType) {
-                        return getComplexTypeAttrs($methodComplexType);
+                        return _.extend(returnData, {
+                            params: getComplexTypeAttrs($methodComplexType)
+                        });
                     }
                 }
 
@@ -179,7 +200,9 @@
                 );
 
                 if ($complexType) {
-                    return getComplexTypeAttrs($complexType);
+                    return _.extend(returnData, {
+                        params: getComplexTypeAttrs($complexType)
+                    });
                 }
 
                 //
@@ -187,21 +210,9 @@
                 // format message attribute and return this
                 //
 
-                if ($messageChild.attr.type) {
-                    $messageChild.attr.type = getNameWithoutNamespace(
-                        $messageChild.attr.type
-                    );
-                }
-
-                if ($messageChild.attr.element) {
-                    $messageChild.attr.element = getNameWithoutNamespace(
-                        $messageChild.attr.element
-                    );
-                }
-
-                return $messageChild.attr;
+                return _.extend(returnData, getFormatedAttr($messageChild.attr));
             }
-        ));
+        );
     }
 
 
@@ -313,8 +324,95 @@
     }
 
 
+
+    function getValFromXmlElement($xmlElement) {
+
+        var elementName = getNameWithoutNamespace($xmlElement.name);
+        if (!elementName) {
+            throw new Error('no elementName');
+        }
+
+        if ($xmlElement.children &&
+            $xmlElement.children.length !== 0) {
+
+            return _.reduce($xmlElement.children,
+                (store, $childItem) => {
+
+                    if (store[elementName]) {
+                        if (!_.isArray(store[elementName])) {
+                            store[elementName] = [store[elementName]];
+                        }
+
+                        store[elementName].push(getValFromXmlElement($childItem));
+                    }
+                    else {
+                        store[elementName] = getValFromXmlElement($childItem);
+                    }
+
+                    return store;
+
+                }, {}
+            )
+        }
+
+        // simple value
+        var returnValue = {};
+            returnValue[elementName] = $xmlElement.val;
+
+        return returnValue;
+    }
+
     var Wsdlrdr = module.exports;
 
+        Wsdlrdr.getXmlDataAsJson = function(xml) {
+
+            var $xmlObj = new xmldoc.XmlDocument(xml);
+            var xmlNamespace = getNamespace($xmlObj.name, true);
+
+            var $body    = $xmlObj.childNamed(xmlNamespace + 'Body');
+            var bodyData = getValFromXmlElement($body);
+            if (bodyData.Body) {
+                return bodyData.Body
+            }
+
+            return bodyData;
+        };
+
+        Wsdlrdr.getNamespaces = function(params, opts) {
+
+            return getWsdl(params, opts)
+                .then(function(wsdl) {
+
+                    var $wsdlObj   = new xmldoc.XmlDocument(wsdl);
+                    return _.reduce($wsdlObj.attr,
+                        (store, attrItem, attrKey) => {
+
+                            var attrNamespace = getNamespace(attrKey);
+                            var attrName      = getNameWithoutNamespace(attrKey);
+
+                            // add namespace of attrs to list
+                            if ($wsdlObj.attr[attrNamespace]) {
+                                if (!_.findWhere(store, { 'short': attrNamespace })) {
+                                    store.push({
+                                        'short': attrNamespace,
+                                        'full' : $wsdlObj.attr[attrNamespace]
+                                    });
+                                }
+                            }
+
+                            // add namespace to list
+                            if (attrNamespace.length !== 0) {
+                                store.push({
+                                    'short': attrName,
+                                    'full' : attrItem
+                                });
+                            }
+
+                            return store;
+                        }, []
+                    );
+                });
+        };
 
         Wsdlrdr.getMethodParamsByName = function(methodName, params, opts) {
 
@@ -346,11 +444,11 @@
                     var $outputMessage  = getMessageNode($messages, getNameWithoutNamespace($output.attr.message));
 
                     return {
-                        requestParams : getMessageAttrs($inputMessage, $wsdlObj),
-                        responseParams: getMessageAttrs($outputMessage, $wsdlObj)
+                        request : getMessageAttrs($inputMessage, $wsdlObj),
+                        response: getMessageAttrs($outputMessage, $wsdlObj)
                     };
                 });
-        }
+        };
 
         Wsdlrdr.getAllFunctions = function(params, opts) {
 
@@ -365,6 +463,6 @@
 
                     return _.map($operations, (operationItem) => operationItem.attr.name);
                 });
-        }
+        };
 
 })();
