@@ -8,10 +8,14 @@ install from npm
     npm i wsdlrdr
 
 ## available methods
+### *getNamespaces*
+returns a collection with all available namespaces
 ### *getMethodParamsByName*
 returns all response/request parameter for a given function name
 ### *getAllFunctions*
 get all in wsdl available functions as a array
+### *getXmlDataAsJson*
+returns data from the given XML as JSON
 
 ## how to use
 
