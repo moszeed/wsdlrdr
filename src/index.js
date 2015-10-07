@@ -310,11 +310,10 @@
                     return wsdl;
                 }
 
-                // set wsdl as path
-                params.path = params.wsdl;
-
                 // refresh wsdl, save to cache
-                return doGetRequest(params, opts)
+                return doGetRequest(_.extend({}, params, {
+                        path: params.wsdl
+                    }), opts)
                     .then((res) => {
                         saveWsdlToCache(params, res.body);
                         return res.body;
@@ -369,13 +368,17 @@
             var $xmlObj = new xmldoc.XmlDocument(xml);
             var xmlNamespace = getNamespace($xmlObj.name, true);
 
-            var $body    = $xmlObj.childNamed(xmlNamespace + 'Body');
-            var bodyData = getValFromXmlElement($body);
-            if (bodyData.Body) {
-                return bodyData.Body
+            var $extractNode = $xmlObj.childNamed(xmlNamespace + 'Body');
+            if (!$extractNode) {
+                $extractNode = $xmlObj;
             }
 
-            return bodyData;
+            var extractedData = getValFromXmlElement($extractNode);
+            if (extractedData.Body) {
+                return extractedData.Body
+            }
+
+            return extractedData;
         };
 
         Wsdlrdr.getNamespaces = function(params, opts) {

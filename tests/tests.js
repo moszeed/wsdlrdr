@@ -123,5 +123,26 @@
                 });
         });
 
+        test('getXmlDataAsJson.noBody', function(t) {
+
+            var xml = '<?xml version="1.0" encoding="utf-16"?>' +
+                        '<CurrentWeather>' +
+                            '<Location>Leipzig-Schkeuditz, Germany (EDDP) 51-25N 012-14E 149M</Location>' +
+                            '<Time>Oct 07, 2015 - 06:50 AM EDT / 2015.10.07 1050 UTC</Time>' +
+                            '<Wind> from the SE (140 degrees) at 6 MPH (5 KT):0</Wind>' +
+                            '<Visibility> greater than 7 mile(s):0</Visibility>' +
+                            '<SkyConditions> mostly cloudy</SkyConditions>' +
+                            '<Temperature> 62 F (17 C)</Temperature>' +
+                            '<DewPoint> 62 F (17 C)</DewPoint>' +
+                            '<RelativeHumidity> 100%</RelativeHumidity>' +
+                            '<Pressure> 29.85 in. Hg (1011 hPa)</Pressure>' +
+                            '<Status>Success</Status>' +
+                        '</CurrentWeather>';
+
+            var dataAsJson = Wsdlrdr.getXmlDataAsJson(xml);
+
+            t.ok(dataAsJson.CurrentWeather.length !== 0, 'data available');
+            t.end();
+        });
 
 })();
