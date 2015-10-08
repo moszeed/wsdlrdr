@@ -369,6 +369,7 @@
         return returnValue;
     }
 
+
     var Wsdlrdr = module.exports;
 
         Wsdlrdr.getXmlDataAsJson = function(xml) {
