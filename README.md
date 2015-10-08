@@ -1,5 +1,7 @@
 wsdlrdr
 ===================
+
+[![Join the chat at https://gitter.im/moszeed/wsdlrdr](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/moszeed/wsdlrdr?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 a simple wsdl parser, with promises
 
 ## how to get
