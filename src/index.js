@@ -310,16 +310,24 @@
                     return wsdl;
                 }
 
-                // refresh wsdl, save to cache
-                return doGetRequest(_.extend({}, params, {
+                // create a params copy
+                var paramsCopy = _.extend({}, params, {
                         path: params.wsdl
-                    }), opts)
+                    });
+
+                // refresh wsdl, save to cache
+                return doGetRequest(paramsCopy, opts)
                     .then((res) => {
+
+                        var contentType = res.response.headers['content-type'];
+                        if (contentType.indexOf('xml') === -1) {
+                            throw new Error('no wsdl/xml response');
+                        }
+
                         saveWsdlToCache(params, res.body);
                         return res.body;
                     });
-            })
-            .catch((err) => { throw new Error(err); });
+            });
     }
 
 
@@ -426,25 +434,29 @@
             return getWsdl(params, opts)
                 .then(function(wsdl) {
 
-                    var $wsdlObj        = new xmldoc.XmlDocument(wsdl);
-                    var wsdlStruct      = getNamespace($wsdlObj.name, true);
+                    var $wsdlObj   = new xmldoc.XmlDocument(wsdl);
+                    var wsdlStruct = getNamespace($wsdlObj.name, true);
 
-                    var $binding        = $wsdlObj.childNamed(wsdlStruct + 'binding');
-                    var $portType       = $wsdlObj.childNamed(wsdlStruct + 'portType');
-                    var $messages       = $wsdlObj.childrenNamed(wsdlStruct + 'message');
-                    var $types          = $wsdlObj.childNamed(wsdlStruct + 'types');
-                    var typesStruct     = getNamespace($types.children[0].name, true);
+                    var $binding    = $wsdlObj.childNamed(wsdlStruct + 'binding');
+                    var $portType   = $wsdlObj.childNamed(wsdlStruct + 'portType');
+                    var $messages   = $wsdlObj.childrenNamed(wsdlStruct + 'message');
+                    var $types      = $wsdlObj.childNamed(wsdlStruct + 'types');
+                    var typesStruct = getNamespace($types.children[0].name, true);
 
-                    var $schema         = $types.childNamed(typesStruct + 'schema');
-                    var $complexTypes   = $schema.childrenNamed(typesStruct + 'complexType');
+                    var $schema       = $types.childNamed(typesStruct + 'schema');
+                    var $complexTypes = $schema.childrenNamed(typesStruct + 'complexType');
 
+                    // try to get method node
                     var $methodPortType = $portType.childWithAttribute('name', methodName);
+                    if (!$methodPortType) {
+                        throw new Error('method ("' + methodName + '") not exists in wsdl');
+                    }
 
-                    var $input          = $methodPortType.childNamed(wsdlStruct + 'input');
-                    var $output         = $methodPortType.childNamed(wsdlStruct + 'output');
+                    var $input  = $methodPortType.childNamed(wsdlStruct + 'input');
+                    var $output = $methodPortType.childNamed(wsdlStruct + 'output');
 
-                    var $inputMessage   = getMessageNode($messages, getNameWithoutNamespace($input.attr.message));
-                    var $outputMessage  = getMessageNode($messages, getNameWithoutNamespace($output.attr.message));
+                    var $inputMessage  = getMessageNode($messages, getNameWithoutNamespace($input.attr.message));
+                    var $outputMessage = getMessageNode($messages, getNameWithoutNamespace($output.attr.message));
 
                     return {
                         request : getMessageAttrs($inputMessage, $wsdlObj),

@@ -25,6 +25,17 @@
 
     var test = require('tape');
 
+        test('notExistsingWsdlUrl',
+            (t) => {
+                Wsdlrdr.getAllFunctions({ host: 'www.notexist.com', wsdl: '/wsdl'})
+                    .then((data) => { t.end('has response') })
+                    .catch((err) => {
+                        t.ok(err, 'wsdl not exists');
+                        t.end();
+                    });
+            }
+        );
+
         test('getNamespaces', function(t) {
 
             var promiseFactory = [];
@@ -97,6 +108,22 @@
                 .then(() => { t.end() })
                 .catch((err) => { console.log(err); })
         });
+
+        test('getMethodParamsByName.givenMethodNotExists', function(t) {
+
+            var wsdlParams = wsdlUrls[0];
+            if (!wsdlParams) {
+                t.end('no wsdlParams');
+            }
+
+            Wsdlrdr.getMethodParamsByName('notAvailableMethodName', wsdlParams[0], wsdlParams[1])
+                .then((data) => { t.end('has found method'); })
+                .catch((err) => {
+                    t.ok(err, 'not found method');
+                    t.end();
+                });
+        });
+
 
         test('getXmlDataAsJson', function(t) {
 
