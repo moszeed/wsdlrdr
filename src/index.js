@@ -477,7 +477,8 @@
                     var $binding    = $wsdlObj.childNamed(wsdlStruct + 'binding');
                     var $operations = $binding.childrenNamed(wsdlStruct + 'operation')
 
-                    return _.map($operations, (operationItem) => operationItem.attr.name);
+                    return _.map($operations, (operationItem) => operationItem.attr.name)
+                        .sort();
                 });
         };
 
