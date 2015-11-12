@@ -136,6 +136,10 @@
 
     function getComplexTypeAttrs($complexType) {
 
+        if ($complexType.children.length === 0) {
+            return [];
+        }
+
         var schemaStruct = getNamespace($complexType.children[0].name, true);
 
         var $sequence = $complexType.childNamed(schemaStruct + 'sequence');
