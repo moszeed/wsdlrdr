@@ -2,6 +2,7 @@
 testing:
     build: .
     dockerfile: Dockerfile-Testing
+    container_name: wsdlrdr_test
     volumes:
     - ./src/index.js:/wsdlrdr/src/index.js
     - ./tests:/wsdlrdr/tests
