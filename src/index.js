@@ -87,7 +87,6 @@
         return cacheFileName;
     }
 
-
     function getNameWithoutNamespace(name) {
 
         var attr = name.split(':');
@@ -156,7 +155,7 @@
 
         var wsdlStruct      = getNamespace($wsdl.name, true);
 
-        var $types          = $wsdl.childNamed(wsdlStruct + 'types');
+        var $types          = getWsdlChild($wsdl, 'types', wsdlStruct);
         var typesStruct     = getNamespace($types.children[0].name, true);
 
         var $schema         = $types.childNamed(typesStruct + 'schema');
@@ -334,8 +333,6 @@
             });
     }
 
-
-
     function getValFromXmlElement($xmlElement) {
 
         var elementName = getNameWithoutNamespace($xmlElement.name);
@@ -371,6 +368,18 @@
             returnValue[elementName] = $xmlElement.val;
 
         return returnValue;
+    }
+
+    function getWsdlChild($wsdlObj, name, wsdlStruct) {
+
+        var $child = $wsdlObj.childNamed(wsdlStruct + name);
+
+        // if not found try some default
+        if (!$child) {
+            $child = $wsdlObj.childNamed('wsdl:' + name);
+        }
+
+        return $child;
     }
 
 
@@ -445,7 +454,8 @@
                     var $binding    = $wsdlObj.childNamed(wsdlStruct + 'binding');
                     var $portType   = $wsdlObj.childNamed(wsdlStruct + 'portType');
                     var $messages   = $wsdlObj.childrenNamed(wsdlStruct + 'message');
-                    var $types      = $wsdlObj.childNamed(wsdlStruct + 'types');
+
+                    var $types      = getWsdlChild($wsdlObj, 'types', wsdlStruct);
                     var typesStruct = getNamespace($types.children[0].name, true);
 
                     var $schema       = $types.childNamed(typesStruct + 'schema');

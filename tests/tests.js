@@ -10,7 +10,8 @@
         [{ host: 'soaptest.parasoft.com', wsdl: '/calculator.wsdl' }],
         [{ host: 'webservices.oorsprong.org', wsdl: '/websamples.countryinfo/CountryInfoService.wso?WSDL'}],
         [{ host: 'webservices.daehosting.com', wsdl: '/services/isbnservice.wso?WSDL'}],
-        [{ host: 'www.dataaccess.com', wsdl: '/webservicesserver/numberconversion.wso?WSDL'}]
+        [{ host: 'www.dataaccess.com', wsdl: '/webservicesserver/numberconversion.wso?WSDL'}],
+        [{ host: 'webservices.optimalpayments.com', wsdl: '/ilsWS/IlsService/v1?wsdl'}]
     ];
 
     function executeSequentially(promiseFactories) {
