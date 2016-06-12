@@ -48,6 +48,6 @@ returns data from the given XML as JSON
     var options = { secure: true }; // https on
 		
         //get all functions listet in wsdl
-		Wsdlrdr.getAllFunction(params, options)
+		Wsdlrdr.getAllFunctions(params, options)
            .then((funcArray) => { console.log(funcArray); })
            .catch((err) => { throw new Error(err) });
