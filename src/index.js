@@ -325,7 +325,7 @@
                         var contentType = res.response.headers['content-type'];
                         if (contentType.indexOf('xml') === -1 &&
                             contentType.indexOf('wsdl') === -1) {
-                            throw new Error('no wsdl/xml response');
+                            console.warn('response content-type neither wsdl nor xml');
                         }
 
                         saveWsdlToCache(params, res.body);
