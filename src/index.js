@@ -1,33 +1,23 @@
-(function() {
+(() => {
+    'use strict';
 
-    "use strict";
+    const xmldoc = require('xmldoc');
+    const request = require('request');
 
-    var xmldoc  = require('xmldoc');
-    var _       = require('underscore');
-    var request = require('request');
+    const fs = require('fs');
+    const path = require('path');
 
-    var fs      = require("fs");
-    var path    = require('path');
+    const cachePath = path.resolve(__dirname, '..', 'cache');
 
-    var cachePath = __dirname + path.sep + '..' + path.sep + 'cache';
-
-
-    function getProtocol(opts) {
-
-        opts = opts || {};
-
-        if (opts.secure === void 0) {
-            opts.secure === false;
+    function getProtocol (opts = {}) {
+        if (!opts.secure) {
+            return 'http://';
         }
 
-        return (opts.secure === true) ? 'https://' : 'http://';
+        return 'https://';
     }
 
-    function doGetRequest(params, opts) {
-
-        params  = params || {};
-        opts    = opts || {};
-
+    function doGetRequest (params = {}, opts = {}) {
         if (params.host === void 0 ||
             params.path === void 0) {
             throw new Error('insufficient arguments for get');
@@ -37,58 +27,49 @@
             params.rejectUnauthorized = true;
         }
 
-        return new Promise(
-            (resolve, reject) => {
+        return new Promise((resolve, reject) => {
+            const requestParams = {
+                url               : getProtocol(opts) + params.host + params.path,
+                headers           : params.headers || {},
+                rejectUnauthorized: params.rejectUnauthorized
+            };
 
-                var requestParams = {
-                    url               : getProtocol(opts) + params.host + params.path,
-                    headers           : params.headers || {},
-                    rejectUnauthorized: params.rejectUnauthorized
-                };
-
-                request(requestParams,
-                    (error, response, body) => {
-                        if (error) reject(error);
-                        else {
-                            resolve({
-                                'body'    : body,
-                                'response': response,
-                                'header'  : response.headers
-                            });
-                        }
-                    }
-                );
-            }
-        );
+            request(requestParams, (error, response, body) => {
+                if (error) reject(error);
+                else {
+                    resolve({
+                        'body'    : body,
+                        'response': response,
+                        'header'  : response.headers
+                    });
+                }
+            });
+        });
     }
 
-
-    function ensureExists(path, mask) {
-
-        mask = mask || '0777';
-
+    function ensureExists (path, mask = '0777') {
         return new Promise((resolve, reject) => {
-            fs.mkdir(path, mask, function(err) {
+            fs.mkdir(path, mask, function (err) {
                 if (err) {
-                    if (err.code == 'EEXIST') resolve();
+                    if (err.code === 'EEXIST') resolve();
                     else reject(err);
                 } else resolve();
             });
         });
     }
 
-    function getCacheFileName(params) {
-
-        // generate cache name
+    /**
+     * generate cache name
+     */
+    function getCacheFileName (params) {
         var cacheFileName = params.host + params.wsdl;
-            cacheFileName = cacheFileName.replace(/[^a-zA-Z 0-9]+/g, "");
-            cacheFileName = encodeURIComponent(cacheFileName);
+        cacheFileName = cacheFileName.replace(/[^a-zA-Z 0-9]+/g, '');
+        cacheFileName = encodeURIComponent(cacheFileName);
 
         return cacheFileName;
     }
 
-    function getNameWithoutNamespace(name) {
-
+    function getNameWithoutNamespace (name) {
         var attr = name.split(':');
         if (attr.length > 1) {
             return attr[1];
@@ -97,11 +78,9 @@
         return name;
     }
 
-    function getNamespace(name, suffix) {
-
+    function getNamespace (name, suffix) {
         var attr = name.split(':');
         if (attr.length > 1) {
-
             if (suffix) {
                 return attr[0] + ':';
             }
@@ -112,9 +91,7 @@
         return '';
     }
 
-
-    function getFormatedAttr(attr) {
-
+    function getFormatedAttr (attr) {
         var namespace = '';
         if (attr.type) {
             attr.type = getNameWithoutNamespace(attr.type);
@@ -123,7 +100,7 @@
 
         if (attr.element) {
             attr.element = getNameWithoutNamespace(attr.element);
-            namespace    = getNamespace(attr.element);
+            namespace = getNamespace(attr.element);
         }
 
         if (namespace.length !== 0) {
@@ -133,107 +110,105 @@
         return attr;
     }
 
-    function getComplexTypeAttrs($complexType) {
-
+    function getComplexTypeAttrs ($complexType) {
         if ($complexType.children.length === 0) {
             return [];
         }
 
-        var schemaStruct = getNamespace($complexType.children[0].name, true);
+        var complexTypeName = $complexType.children[0].name;
+        if (!complexTypeName) {
+            let foundTypeItem = $complexType.children.find((typeItem) => typeItem.name);
+            if (foundTypeItem) {
+                complexTypeName = foundTypeItem.name;
+            }
+        }
+        var schemaStruct = getNamespace(complexTypeName, true);
 
         var $sequence = $complexType.childNamed(schemaStruct + 'sequence');
         if ($sequence) {
-            return _.map($sequence.children, ($seqChild) => {
-                return getFormatedAttr($seqChild.attr);
-            });
+            var sequenceChildrens = $sequence.children.filter((childItem) => childItem.name);
+            return sequenceChildrens.map(($seqChild) => getFormatedAttr($seqChild.attr));
         }
 
         return getFormatedAttr($complexType.attr);
     }
 
-    function getMessageAttrs($message, $wsdl) {
+    function getMessageAttrs ($message, $wsdl) {
+        var wsdlStruct = getNamespace($wsdl.name, true);
 
-        var wsdlStruct      = getNamespace($wsdl.name, true);
+        var $types = getWsdlChild($wsdl, 'types', wsdlStruct);
+        var typeName = $types.children[0].name;
+        if (!typeName) {
+            let foundTypeItem = $types.children.find((typeItem) => typeItem.name);
+            if (foundTypeItem) {
+                typeName = foundTypeItem.name;
+            }
+        }
 
-        var $types          = getWsdlChild($wsdl, 'types', wsdlStruct);
-        var typesStruct     = getNamespace($types.children[0].name, true);
+        var typesStruct = getNamespace(typeName, true);
 
-        var $schema         = $types.childNamed(typesStruct + 'schema');
-        var $complexTypes   = $schema.childrenNamed(typesStruct + 'complexType');
+        var $schema = $types.childNamed(typesStruct + 'schema');
+        var $complexTypes = $schema.childrenNamed(typesStruct + 'complexType');
 
-        return _.map($message.children,
-            ($messageChild) => {
+        var messageChildrens = $message.children.filter((childItem) => childItem.name);
+        return messageChildrens.map(($messageChild) => {
+            var messageAttr = $messageChild.attr;
+            var typeName = getNameWithoutNamespace(messageAttr.type || messageAttr.element);
+            var returnData = {
+                name     : messageAttr.name,
+                namespace: getNamespace(messageAttr.type || messageAttr.element)
+            };
 
-                var messageAttr   = $messageChild.attr;
-                var typeName      = getNameWithoutNamespace(messageAttr.type || messageAttr.element);
-                var returnData    = {
-                    name     : messageAttr.name,
-                    namespace: getNamespace(messageAttr.type || messageAttr.element)
-                };
+            //
+            // first look if schema exists
+            //
 
-                //
-                // first look if schema exists
-                //
-
-                // is simple type
-                var $methodSchema = $schema.childWithAttribute('name', typeName);
-                if ($methodSchema) {
-
-                    if ($methodSchema.children.length === 0) {
-                        return _.extend(returnData, getFormatedAttr($methodSchema.attr));
-                    }
-
-                    // is complex type
-                    var $methodComplexType = $methodSchema.childNamed(typesStruct + 'complexType');
-                    if ($methodComplexType) {
-                        return _.extend(returnData, {
-                            params: getComplexTypeAttrs($methodComplexType)
-                        });
-                    }
+            // is simple type
+            var $methodSchema = $schema.childWithAttribute('name', typeName);
+            if ($methodSchema) {
+                if ($methodSchema.children.length === 0) {
+                    return Object.assign({}, returnData, getFormatedAttr($methodSchema.attr));
                 }
 
-                //
-                // search in complex types if exists
-                //
-
-                var $complexType = _.find($complexTypes,
-                    ($complexType) => {
-                        return $complexType.attr.name === typeName;
-                    }
-                );
-
-                if ($complexType) {
-                    return _.extend(returnData, {
-                        params: getComplexTypeAttrs($complexType)
+                // is complex type
+                var $methodComplexType = $methodSchema.childNamed(typesStruct + 'complexType');
+                if ($methodComplexType) {
+                    return Object.assign({}, returnData, {
+                        params: getComplexTypeAttrs($methodComplexType)
                     });
                 }
-
-                //
-                // still no results
-                // format message attribute and return this
-                //
-
-                return _.extend(returnData, getFormatedAttr($messageChild.attr));
             }
-        );
+
+            //
+            // search in complex types if exists
+            //
+            var $complexType = $complexTypes.find(($complexType) => $complexType.attr.name === typeName);
+            if ($complexType) {
+                return Object.assign({}, returnData, {
+                    params: getComplexTypeAttrs($complexType)
+                });
+            }
+
+            //
+            // still no results
+            // format message attribute and return this
+            //
+
+            return Object.assign({}, returnData, getFormatedAttr($messageChild.attr));
+        });
     }
 
-
-    function checkCachedFile(fullPath) {
-
+    function checkCachedFile (fullPath) {
         return new Promise((resolve, reject) => {
             fs.stat(fullPath, (err, fileStats) => {
                 if (err) {
-
                     // no file
                     if (err.code === 'ENOENT') {
                         resolve(true);
                     } else {
                         throw new Error(err);
                     }
-                }
-                else {
-
+                } else {
                     var fileTime = new Date(fileStats.mtime).getTime();
                     if (Date.now() - fileTime >= 84000000) {
                         return resolve(true);
@@ -245,26 +220,17 @@
         });
     }
 
-    function getCachedWsdl(params, opts) {
-
-        // generate cache name
-        var cacheFileName = params.host + params.wsdl;
-            cacheFileName = cacheFileName.replace(/[^a-zA-Z 0-9]+/g, "");
-            cacheFileName = encodeURIComponent(cacheFileName);
-
-        var fullPath = __dirname + path.sep + '..' +
-                                   path.sep + 'cache' +
-                                   path.sep + cacheFileName;
+    function getCachedWsdl (params, opts) {
+        const cacheFileName = getCacheFileName(params);
+        const fullPath = path.resolve(__dirname, '..', 'cache', cacheFileName);
 
         return checkCachedFile(fullPath)
             .then((renew) => {
-
                 if (renew) {
                     return null;
                 }
 
                 return new Promise((resolve, reject) => {
-
                     fs.readFile(fullPath, 'UTF-8',
                         (err, fileData) => {
                             if (err) reject(err);
@@ -273,59 +239,59 @@
                     );
                 });
             })
-            .catch((err) => { throw new Error(err); })
+            .catch((err) => {
+                throw new Error(err);
+            });
     }
 
-    function saveWsdlToCache(params, wsdlContent) {
-
-        // generate cache name
+    function saveWsdlToCache (params, wsdlContent) {
         var cacheFileName = getCacheFileName(params);
         var fullPath = cachePath + path.sep + cacheFileName;
 
         // write to cache
         return ensureExists(cachePath)
             .then(() => {
-
                 return new Promise((resolve, reject) => {
                     fs.writeFile(fullPath, wsdlContent, (err) => {
-                            if (err) reject(err);
-                            resolve();
-                        }
-                    );
-                })
+                        if (err) reject(err);
+                        resolve();
+                    });
+                });
             })
             .catch((err) => {
                 throw new Error(err);
             });
     }
 
-
-    function getWsdl(params, opts) {
-
-        opts   = opts || {};
-        params = params || {};
-
+    function getWsdl (params = {}, opts = {}) {
         return getCachedWsdl(params, opts)
             .then((wsdl) => {
-
                 // return cached wsdl if available
                 if (wsdl !== null) {
                     return wsdl;
                 }
 
                 // create a params copy
-                var paramsCopy = _.extend({}, params, {
-                        path: params.wsdl
-                    });
+                var paramsCopy = Object.assign({}, params, {
+                    path: params.wsdl
+                });
 
                 // refresh wsdl, save to cache
                 return doGetRequest(paramsCopy, opts)
                     .then((res) => {
+                        if (res.response.statusCode !== 200) {
+                            throw new Error(`fail to get wsdl: ${res.response.statusMessage}`);
+                        }
 
                         var contentType = res.response.headers['content-type'];
                         if (contentType.indexOf('xml') === -1 &&
                             contentType.indexOf('wsdl') === -1) {
-                            throw new Error('no wsdl/xml response');
+                            if (opts.failOnWrongContentType === void 0 ||
+                                opts.failOnWrongContentType === true) {
+                                throw new Error('no wsdl/xml response');
+                            } else {
+                                console.error('no wsdl/xml as content-type');
+                            }
                         }
 
                         saveWsdlToCache(params, res.body);
@@ -334,8 +300,7 @@
             });
     }
 
-    function getValFromXmlElement($xmlElement) {
-
+    function getValFromXmlElement ($xmlElement) {
         var elementName = getNameWithoutNamespace($xmlElement.name);
         if (!elementName) {
             throw new Error('no elementName');
@@ -343,36 +308,32 @@
 
         if ($xmlElement.children &&
             $xmlElement.children.length !== 0) {
-
-            return _.reduce($xmlElement.children,
-                (store, $childItem) => {
-
+            var xmlElementChildrens = $xmlElement.children.filter((xmlItem) => xmlItem.name);
+            if (xmlElementChildrens.length !== 0) {
+                return xmlElementChildrens.reduce((store, $childItem) => {
                     if (store[elementName]) {
-                        if (!_.isArray(store[elementName])) {
+                        if (!Array.isArray(store[elementName])) {
                             store[elementName] = [store[elementName]];
                         }
 
                         store[elementName].push(getValFromXmlElement($childItem));
-                    }
-                    else {
+                    } else {
                         store[elementName] = getValFromXmlElement($childItem);
                     }
 
                     return store;
-
-                }, {}
-            )
+                }, {});
+            }
         }
 
         // simple value
         var returnValue = {};
-            returnValue[elementName] = $xmlElement.val;
+        returnValue[elementName] = $xmlElement.val;
 
         return returnValue;
     }
 
-    function getWsdlChild($wsdlObj, name, wsdlStruct) {
-
+    function getWsdlChild ($wsdlObj, name, wsdlStruct) {
         var $child = $wsdlObj.childNamed(wsdlStruct + name);
 
         // if not found try some default
@@ -383,118 +344,115 @@
         return $child;
     }
 
-
     var Wsdlrdr = module.exports;
 
-        Wsdlrdr.getXmlDataAsJson = function(xml) {
+    Wsdlrdr.getXmlDataAsJson = function (xml) {
+        var $xmlObj = new xmldoc.XmlDocument(xml);
+        var xmlNamespace = getNamespace($xmlObj.name, true);
 
-            var $xmlObj = new xmldoc.XmlDocument(xml);
-            var xmlNamespace = getNamespace($xmlObj.name, true);
+        var $extractNode = $xmlObj.childNamed(xmlNamespace + 'Body');
+        if (!$extractNode) {
+            $extractNode = $xmlObj;
+        }
 
-            var $extractNode = $xmlObj.childNamed(xmlNamespace + 'Body');
-            if (!$extractNode) {
-                $extractNode = $xmlObj;
-            }
+        var extractedData = getValFromXmlElement($extractNode);
+        if (extractedData.Body) {
+            return extractedData.Body;
+        }
 
-            var extractedData = getValFromXmlElement($extractNode);
-            if (extractedData.Body) {
-                return extractedData.Body
-            }
+        return extractedData;
+    };
 
-            return extractedData;
-        };
+    Wsdlrdr.getNamespaces = function (params, opts) {
+        return getWsdl(params, opts)
+            .then(function (wsdl) {
+                let $wsdlObj = new xmldoc.XmlDocument(wsdl);
+                let wsdlObjAttrNames = Object.keys($wsdlObj.attr);
+                return wsdlObjAttrNames.reduce((store, attrKey) => {
+                    var attrNamespace = getNamespace(attrKey);
+                    var attrName = getNameWithoutNamespace(attrKey);
 
-        Wsdlrdr.getNamespaces = function(params, opts) {
-
-            return getWsdl(params, opts)
-                .then(function(wsdl) {
-
-                    var $wsdlObj   = new xmldoc.XmlDocument(wsdl);
-                    return _.reduce($wsdlObj.attr,
-                        (store, attrItem, attrKey) => {
-
-                            var attrNamespace = getNamespace(attrKey);
-                            var attrName      = getNameWithoutNamespace(attrKey);
-
-                            // add namespace of attrs to list
-                            if ($wsdlObj.attr[attrNamespace]) {
-                                if (!_.findWhere(store, { 'short': attrNamespace })) {
-                                    store.push({
-                                        'short': attrNamespace,
-                                        'full' : $wsdlObj.attr[attrNamespace]
-                                    });
-                                }
-                            }
-
-                            // add namespace to list
-                            if (attrNamespace.length !== 0) {
-                                store.push({
-                                    'short': attrName,
-                                    'full' : attrItem
-                                });
-                            }
-
-                            return store;
-                        }, []
-                    );
-                });
-        };
-
-        Wsdlrdr.getMethodParamsByName = function(methodName, params, opts) {
-
-            var getMessageNode = ($messages, nodeName) => _.find($messages, ($message) =>
-                $message.attr.name === getNameWithoutNamespace(nodeName)
-            );
-
-            return getWsdl(params, opts)
-                .then(function(wsdl) {
-
-                    var $wsdlObj   = new xmldoc.XmlDocument(wsdl);
-                    var wsdlStruct = getNamespace($wsdlObj.name, true);
-
-                    var $binding    = $wsdlObj.childNamed(wsdlStruct + 'binding');
-                    var $portType   = $wsdlObj.childNamed(wsdlStruct + 'portType');
-                    var $messages   = $wsdlObj.childrenNamed(wsdlStruct + 'message');
-
-                    var $types      = getWsdlChild($wsdlObj, 'types', wsdlStruct);
-                    var typesStruct = getNamespace($types.children[0].name, true);
-
-                    var $schema       = $types.childNamed(typesStruct + 'schema');
-                    var $complexTypes = $schema.childrenNamed(typesStruct + 'complexType');
-
-                    // try to get method node
-                    var $methodPortType = $portType.childWithAttribute('name', methodName);
-                    if (!$methodPortType) {
-                        throw new Error('method ("' + methodName + '") not exists in wsdl');
+                    // add namespace of attrs to list
+                    if ($wsdlObj.attr[attrNamespace]) {
+                        if (!store.find((storeItem) => storeItem.short === attrNamespace)) {
+                            store.push({
+                                'short': attrNamespace,
+                                'full' : $wsdlObj.attr[attrNamespace]
+                            });
+                        }
                     }
 
-                    var $input  = $methodPortType.childNamed(wsdlStruct + 'input');
-                    var $output = $methodPortType.childNamed(wsdlStruct + 'output');
+                    // add namespace to list
+                    if (attrNamespace.length !== 0) {
+                        store.push({
+                            'short': attrName,
+                            'full' : $wsdlObj.attr[attrKey]
+                        });
+                    }
 
-                    var $inputMessage  = getMessageNode($messages, getNameWithoutNamespace($input.attr.message));
-                    var $outputMessage = getMessageNode($messages, getNameWithoutNamespace($output.attr.message));
+                    return store;
+                }, []);
+            });
+    };
 
-                    return {
-                        request : getMessageAttrs($inputMessage, $wsdlObj),
-                        response: getMessageAttrs($outputMessage, $wsdlObj)
-                    };
-                });
-        };
+    Wsdlrdr.getMethodParamsByName = function (methodName, params, opts) {
+        var getMessageNode = ($messages, nodeName) => $messages.find(($message) =>
+            $message.attr.name === getNameWithoutNamespace(nodeName)
+        );
 
-        Wsdlrdr.getAllFunctions = function(params, opts) {
+        return getWsdl(params, opts)
+            .then(function (wsdl) {
+                var $wsdlObj = new xmldoc.XmlDocument(wsdl);
+                var wsdlStruct = getNamespace($wsdlObj.name, true);
 
-            return getWsdl(params, opts)
-                .then(function(wsdl) {
+                var $binding = $wsdlObj.childNamed(wsdlStruct + 'binding');
+                var $portType = $wsdlObj.childNamed(wsdlStruct + 'portType');
+                var $messages = $wsdlObj.childrenNamed(wsdlStruct + 'message');
 
-                    var $wsdlObj   = new xmldoc.XmlDocument(wsdl);
-                    var wsdlStruct = getNamespace($wsdlObj.name, true);
+                var $types = getWsdlChild($wsdlObj, 'types', wsdlStruct);
 
-                    var $binding    = $wsdlObj.childNamed(wsdlStruct + 'binding');
-                    var $operations = $binding.childrenNamed(wsdlStruct + 'operation')
+                var typeName = $types.children[0].name;
+                if (!typeName) {
+                    let foundTypeItem = $types.children.find((typeItem) => typeItem.name);
+                    if (foundTypeItem) {
+                        typeName = foundTypeItem.name;
+                    }
+                }
 
-                    return _.map($operations, (operationItem) => operationItem.attr.name)
-                        .sort();
-                });
-        };
+                var typesStruct = getNamespace(typeName, true);
 
+                var $schema = $types.childNamed(typesStruct + 'schema');
+                var $complexTypes = $schema.childrenNamed(typesStruct + 'complexType');
+
+                // try to get method node
+                var $methodPortType = $portType.childWithAttribute('name', methodName);
+                if (!$methodPortType) {
+                    throw new Error('method ("' + methodName + '") not exists in wsdl');
+                }
+
+                var $input = $methodPortType.childNamed(wsdlStruct + 'input');
+                var $output = $methodPortType.childNamed(wsdlStruct + 'output');
+
+                var $inputMessage = getMessageNode($messages, getNameWithoutNamespace($input.attr.message));
+                var $outputMessage = getMessageNode($messages, getNameWithoutNamespace($output.attr.message));
+
+                return {
+                    request : getMessageAttrs($inputMessage, $wsdlObj),
+                    response: getMessageAttrs($outputMessage, $wsdlObj)
+                };
+            });
+    };
+
+    Wsdlrdr.getAllFunctions = function (params, opts) {
+        return getWsdl(params, opts)
+            .then(function (wsdl) {
+                var $wsdlObj = new xmldoc.XmlDocument(wsdl);
+                var wsdlStruct = getNamespace($wsdlObj.name, true);
+
+                var $binding = $wsdlObj.childNamed(wsdlStruct + 'binding');
+                var $operations = $binding.childrenNamed(wsdlStruct + 'operation');
+
+                return $operations.map((operationItem) => operationItem.attr.name).sort();
+            });
+    };
 })();
