@@ -9,7 +9,7 @@
 
     const cachePath = path.resolve(__dirname, '..', 'cache');
 
-    function getProtocol (opts = {}) {
+    function getProtocol(opts = {}) {
         if (!opts.secure) {
             return 'http://';
         }
@@ -17,7 +17,7 @@
         return 'https://';
     }
 
-    function doGetRequest (params = {}, opts = {}) {
+    function doGetRequest(params = {}, opts = {}) {
         if (params.host === void 0 ||
             params.path === void 0) {
             throw new Error('insufficient arguments for get');
@@ -29,25 +29,41 @@
 
         return new Promise((resolve, reject) => {
             const requestParams = {
-                url               : getProtocol(opts) + params.host + params.path,
-                headers           : params.headers || {},
+                url: getProtocol(opts) + params.host + params.path,
+                headers: params.headers || {},
                 rejectUnauthorized: params.rejectUnauthorized
             };
+
+            if (params.key !== void 0) {
+                requestParams.key = params.key;
+            }
+
+            if (params.cert !== void 0) {
+                requestParams.cert = params.cert;
+            }
+
+            if (params.ca !== void 0) {
+                requestParams.ca = params.ca;
+            }
+
+            if (params.passphrase !== void 0) {
+                requestParams.passphrase = params.passphrase;
+            }
 
             request(requestParams, (error, response, body) => {
                 if (error) reject(error);
                 else {
                     resolve({
-                        'body'    : body,
+                        'body': body,
                         'response': response,
-                        'header'  : response.headers
+                        'header': response.headers
                     });
                 }
             });
         });
     }
 
-    function ensureExists (path, mask = '0777') {
+    function ensureExists(path, mask = '0777') {
         return new Promise((resolve, reject) => {
             fs.mkdir(path, mask, function (err) {
                 if (err) {
@@ -61,7 +77,7 @@
     /**
      * generate cache name
      */
-    function getCacheFileName (params) {
+    function getCacheFileName(params) {
         var cacheFileName = params.host + params.wsdl;
         cacheFileName = cacheFileName.replace(/[^a-zA-Z 0-9]+/g, '');
         cacheFileName = encodeURIComponent(cacheFileName);
@@ -69,7 +85,7 @@
         return cacheFileName;
     }
 
-    function getNameWithoutNamespace (name) {
+    function getNameWithoutNamespace(name) {
         var attr = name.split(':');
         if (attr.length > 1) {
             return attr[1];
@@ -78,7 +94,7 @@
         return name;
     }
 
-    function getNamespace (name, suffix) {
+    function getNamespace(name, suffix) {
         var attr = name.split(':');
         if (attr.length > 1) {
             if (suffix) {
@@ -91,7 +107,7 @@
         return '';
     }
 
-    function getFormatedAttr (attr) {
+    function getFormatedAttr(attr) {
         var namespace = '';
         if (attr.type) {
             attr.type = getNameWithoutNamespace(attr.type);
@@ -110,7 +126,7 @@
         return attr;
     }
 
-    function getComplexTypeAttrs ($complexType) {
+    function getComplexTypeAttrs($complexType) {
         if ($complexType.children.length === 0) {
             return [];
         }
@@ -133,7 +149,7 @@
         return getFormatedAttr($complexType.attr);
     }
 
-    function getMessageAttrs ($message, $wsdl) {
+    function getMessageAttrs($message, $wsdl) {
         var wsdlStruct = getNamespace($wsdl.name, true);
 
         var $types = getWsdlChild($wsdl, 'types', wsdlStruct);
@@ -155,7 +171,7 @@
             var messageAttr = $messageChild.attr;
             var typeName = getNameWithoutNamespace(messageAttr.type || messageAttr.element);
             var returnData = {
-                name     : messageAttr.name,
+                name: messageAttr.name,
                 namespace: getNamespace(messageAttr.type || messageAttr.element)
             };
 
@@ -198,7 +214,7 @@
         });
     }
 
-    function checkCachedFile (fullPath) {
+    function checkCachedFile(fullPath) {
         return new Promise((resolve, reject) => {
             fs.stat(fullPath, (err, fileStats) => {
                 if (err) {
@@ -220,7 +236,7 @@
         });
     }
 
-    function getCachedWsdl (params, opts) {
+    function getCachedWsdl(params, opts) {
         const cacheFileName = getCacheFileName(params);
         const fullPath = path.resolve(__dirname, '..', 'cache', cacheFileName);
 
@@ -244,7 +260,7 @@
             });
     }
 
-    function saveWsdlToCache (params, wsdlContent) {
+    function saveWsdlToCache(params, wsdlContent) {
         var cacheFileName = getCacheFileName(params);
         var fullPath = cachePath + path.sep + cacheFileName;
 
@@ -263,7 +279,7 @@
             });
     }
 
-    function getWsdl (params = {}, opts = {}) {
+    function getWsdl(params = {}, opts = {}) {
         return getCachedWsdl(params, opts)
             .then((wsdl) => {
                 // return cached wsdl if available
@@ -300,7 +316,7 @@
             });
     }
 
-    function getValFromXmlElement ($xmlElement) {
+    function getValFromXmlElement($xmlElement) {
         var elementName = getNameWithoutNamespace($xmlElement.name);
         if (!elementName) {
             throw new Error('no elementName');
@@ -333,7 +349,7 @@
         return returnValue;
     }
 
-    function getWsdlChild ($wsdlObj, name, wsdlStruct) {
+    function getWsdlChild($wsdlObj, name, wsdlStruct) {
         var $child = $wsdlObj.childNamed(wsdlStruct + name);
 
         // if not found try some default
@@ -377,7 +393,7 @@
                         if (!store.find((storeItem) => storeItem.short === attrNamespace)) {
                             store.push({
                                 'short': attrNamespace,
-                                'full' : $wsdlObj.attr[attrNamespace]
+                                'full': $wsdlObj.attr[attrNamespace]
                             });
                         }
                     }
@@ -386,7 +402,7 @@
                     if (attrNamespace.length !== 0) {
                         store.push({
                             'short': attrName,
-                            'full' : $wsdlObj.attr[attrKey]
+                            'full': $wsdlObj.attr[attrKey]
                         });
                     }
 
@@ -437,7 +453,7 @@
                 var $outputMessage = getMessageNode($messages, getNameWithoutNamespace($output.attr.message));
 
                 return {
-                    request : getMessageAttrs($inputMessage, $wsdlObj),
+                    request: getMessageAttrs($inputMessage, $wsdlObj),
                     response: getMessageAttrs($outputMessage, $wsdlObj)
                 };
             });
