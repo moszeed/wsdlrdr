@@ -116,7 +116,7 @@
             >
             <SOAP-ENV:Body>
                 <tns:testResponseItem1>123</tns:testResponseItem1>
-                <tns:testResponseItem2>123</tns:testResponseItem2>
+                <tns:testResponseItem2>234</tns:testResponseItem2>
             </SOAP-ENV:Body>
         </SOAP-ENV:Envelope>`;
 
@@ -147,4 +147,24 @@
         t.ok(dataAsJson.CurrentWeather.length !== 0, 'data available');
         t.end();
     });
+
+    test('getXmlDataAsJson.withAttrValue', (t) => {
+        t.plan(1);
+        var responseXml = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+                <S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+                <S:Body>
+                    <ns5:getDataTypeResponse xmlns:ns5="http://sphinx.dat.de/services/DataTypeService">
+                        <vehicleType key="1" value="ValueItem1"/>
+                        <vehicleType key="2" value="ValueItem2"/>
+                        <vehicleType key="3" value="ValueItem3"/>
+                        <vehicleType key="4" value="ValueItem4"/>
+                        <vehicleType key="5" value="ValueItem5"/>
+                    </ns5:getDataTypeResponse>
+                </S:Body>
+            </S:Envelope>`;
+
+        var dataAsJson = Wsdlrdr.getXmlDataAsJson(responseXml);
+        if (dataAsJson.getDataTypeResponse) t.pass('getDataTypeResponse is available');
+    });
+
 })();

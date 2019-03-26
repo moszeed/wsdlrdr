@@ -316,7 +316,20 @@
                             store[elementName] = [store[elementName]];
                         }
 
-                        store[elementName].push(getValFromXmlElement($childItem));
+                        const pushable = getValFromXmlElement($childItem);
+                        if (pushable) {
+                            for (let pushKey of Object.keys(pushable)) {
+                                const pushItemFound = store[elementName].find((storeItem) => storeItem[pushKey]);
+                                if (pushItemFound) {
+                                    if (!Array.isArray(pushItemFound[pushKey])) {
+                                        pushItemFound[pushKey] = [pushItemFound[pushKey]];
+                                    }
+                                    pushItemFound[pushKey].push(pushable[pushKey]);
+                                }
+                            }
+
+                            store[elementName].push(pushable);
+                        }
                     } else {
                         store[elementName] = getValFromXmlElement($childItem);
                     }
@@ -326,11 +339,14 @@
             }
         }
 
-        // simple value
-        var returnValue = {};
-        returnValue[elementName] = $xmlElement.val;
+        const response = {};
+        response[elementName] = $xmlElement.val;
+        if ($xmlElement.attr) {
+            response[elementName] = { value: response[elementName] };
+            response[elementName] = Object.assign({}, response[elementName], $xmlElement.attr);
+        }
 
-        return returnValue;
+        return response;
     }
 
     function getWsdlChild ($wsdlObj, name, wsdlStruct) {
