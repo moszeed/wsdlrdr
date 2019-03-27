@@ -1,11 +1,11 @@
 {
   "name": "wsdlrdr",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "a simple wsdl parser, with promises",
   "main": "./src/index.js",
   "dependencies": {
-    "request": "^2.64.0",
-    "xmldoc": "^1.1.0"
+    "request": "^2.88.0",
+    "xmldoc": "^1.1.2"
   },
   "devDependencies": {
     "tape": "latest",

@@ -166,5 +166,4 @@
         var dataAsJson = Wsdlrdr.getXmlDataAsJson(responseXml);
         if (dataAsJson.getDataTypeResponse) t.pass('getDataTypeResponse is available');
     });
-
 })();
