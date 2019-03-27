@@ -341,7 +341,7 @@
 
         const response = {};
         response[elementName] = $xmlElement.val;
-        if ($xmlElement.attr) {
+        if ($xmlElement.attr && Object.keys($xmlElement.attr).length !== 0) {
             response[elementName] = { value: response[elementName] };
             response[elementName] = Object.assign({}, response[elementName], $xmlElement.attr);
         }
