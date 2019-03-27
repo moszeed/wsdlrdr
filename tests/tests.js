@@ -148,6 +148,39 @@
         t.end();
     });
 
+    test('getXmlDataAsJson.array', (t) => {
+        var responseXml = `<?xml version="1.0" encoding="UTF-8"?>
+            <SOAP-ENV:Envelope
+                xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+                xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/"
+                xmlns:tns="http://www.dataaccess.com/webservicesserver/"
+                xmlns:cns0="header-data1"
+                xmlns:cns1="header-data2"
+                xmlns:cns2="header-data3">
+            <SOAP-ENV:Header>
+                <cns0:header1>header-data1</cns0:header1>
+                <cns1:header2>header-data2</cns1:header2>
+                <cns2:header3>header-data3</cns2:header3>
+            </SOAP-ENV:Header>
+            <SOAP-ENV:Body>
+                <getDataTypeResponse>
+                    <testParam1>1</testParam1>
+                    <testParam2>2</testParam2>
+                    <testParam2>3</testParam2>
+                </getDataTypeResponse>
+            </SOAP-ENV:Body>
+        </SOAP-ENV:Envelope>`;
+
+        var dataAsJson = Wsdlrdr.getXmlDataAsJson(responseXml);
+
+        t.ok(dataAsJson.getDataTypeResponse, 'getDataTypeResponse is available');
+        t.ok(dataAsJson.getDataTypeResponse.filter((i) => i['testParam2']).length === 1, 'testParam2 only once');
+
+        t.end();
+    });
+
     test('getXmlDataAsJson.withAttrValue', (t) => {
         t.plan(1);
         var responseXml = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>

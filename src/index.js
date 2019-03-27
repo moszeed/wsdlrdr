@@ -325,6 +325,7 @@
                                         pushItemFound[pushKey] = [pushItemFound[pushKey]];
                                     }
                                     pushItemFound[pushKey].push(pushable[pushKey]);
+                                    return store;
                                 }
                             }
 
