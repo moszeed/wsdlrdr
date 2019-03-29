@@ -3,6 +3,7 @@
 
     const xmldoc = require('xmldoc');
     const request = require('request');
+    const deepmerge = require('deepmerge');
 
     const fs = require('fs');
     const path = require('path');
@@ -306,30 +307,30 @@
             throw new Error('no elementName');
         }
 
+        let childValues = null;
         if ($xmlElement.children &&
             $xmlElement.children.length !== 0) {
             var xmlElementChildrens = $xmlElement.children.filter((xmlItem) => xmlItem.name);
             if (xmlElementChildrens.length !== 0) {
-                return xmlElementChildrens.reduce((store, $childItem) => {
+                childValues = xmlElementChildrens.reduce((store, $childItem) => {
                     if (store[elementName]) {
-                        if (!Array.isArray(store[elementName])) {
-                            store[elementName] = [store[elementName]];
-                        }
+                        const addable = getValFromXmlElement($childItem);
+                        if (addable) {
+                            if (Object(store[elementName]) === store[elementName]) {
+                                for (let addKey of Object.keys(addable)) {
+                                    if (store[elementName][addKey]) {
+                                        if (!Array.isArray(store[elementName][addKey])) {
+                                            store[elementName][addKey] = [store[elementName][addKey]];
+                                        }
 
-                        const pushable = getValFromXmlElement($childItem);
-                        if (pushable) {
-                            for (let pushKey of Object.keys(pushable)) {
-                                const pushItemFound = store[elementName].find((storeItem) => storeItem[pushKey]);
-                                if (pushItemFound) {
-                                    if (!Array.isArray(pushItemFound[pushKey])) {
-                                        pushItemFound[pushKey] = [pushItemFound[pushKey]];
+                                        store[elementName][addKey].push(addable[addKey]);
+                                    } else {
+                                        store[elementName][addKey] = addable[addKey];
                                     }
-                                    pushItemFound[pushKey].push(pushable[pushKey]);
-                                    return store;
                                 }
-                            }
 
-                            store[elementName].push(pushable);
+                                return store;
+                            }
                         }
                     } else {
                         store[elementName] = getValFromXmlElement($childItem);
@@ -340,11 +341,27 @@
             }
         }
 
-        const response = {};
-        response[elementName] = $xmlElement.val;
+        let response = {};
+
+        const xmlValue = $xmlElement.val
+            .replace(/[\n\r\t]/g, '')
+            .trim();
+
+        if (xmlValue.length !== 0) {
+            // str.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+            response[elementName] = xmlValue;
+        }
+
+        // response[elementName] = $xmlElement.val;
         if ($xmlElement.attr && Object.keys($xmlElement.attr).length !== 0) {
-            response[elementName] = { value: response[elementName] };
+            if (response[elementName]) {
+                response[elementName] = { value: response[elementName] };
+            }
             response[elementName] = Object.assign({}, response[elementName], $xmlElement.attr);
+        }
+
+        if (childValues) {
+            response = deepmerge(response, childValues);
         }
 
         return response;

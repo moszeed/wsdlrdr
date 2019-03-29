@@ -121,10 +121,8 @@
         </SOAP-ENV:Envelope>`;
 
         var dataAsJson = Wsdlrdr.getXmlDataAsJson(responseXml);
-        dataAsJson.forEach((dataItem) => {
-            if (dataItem.testResponseItem1) t.pass('testResponseItem1 is available');
-            if (dataItem.testResponseItem2) t.pass('testResponseItem2 is available');
-        });
+        if (dataAsJson.testResponseItem1) t.pass('testResponseItem1 is available');
+        if (dataAsJson.testResponseItem2) t.pass('testResponseItem2 is available');
     });
 
     test('getXmlDataAsJson.noBody', (t) => {
@@ -174,9 +172,8 @@
         </SOAP-ENV:Envelope>`;
 
         var dataAsJson = Wsdlrdr.getXmlDataAsJson(responseXml);
-
         t.ok(dataAsJson.getDataTypeResponse, 'getDataTypeResponse is available');
-        t.ok(dataAsJson.getDataTypeResponse.filter((i) => i['testParam2']).length === 1, 'testParam2 only once');
+        t.ok(dataAsJson.getDataTypeResponse.testParam2.length === 2, 'testParam2 got 2 items');
 
         t.end();
     });
@@ -198,5 +195,38 @@
 
         var dataAsJson = Wsdlrdr.getXmlDataAsJson(responseXml);
         if (dataAsJson.getDataTypeResponse) t.pass('getDataTypeResponse is available');
+    });
+
+    test('getXmlDataAsJson.withAttrInTopTag', (t) => {
+        var responseXml = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+            <S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+                <S:Body>
+                    <ns5:topLevelTag attribute1="1111" attribute2="2222">
+                        <lowerLevelTag attribute1="3333" attribute2="4444">
+                            <lowerLEvelTagItem>
+                                <tagCollection>
+                                    <entry name="test1" value="1234"/>
+                                    <entry name="test2" value="5678"/>
+                                    <entry name="test3" value="9101"/>
+                                    <entry name="test4" value="1213"/>
+                                    <entry name="test5" value="1415"/>
+                                </tagCollection>
+                            </lowerLEvelTagItem>
+                        </lowerLevelTag>
+                    </ns5:topLevelTag>
+                </S:Body>
+            </S:Envelope>`;
+
+        var dataAsJson = Wsdlrdr.getXmlDataAsJson(responseXml);
+
+        t.ok(dataAsJson.topLevelTag, 'topLevelTag is available');
+        t.ok(dataAsJson.topLevelTag.attribute1, 'topLevelTag.attribute1 is available');
+        t.ok(dataAsJson.topLevelTag.attribute2, 'topLevelTag.attribute2 is available');
+
+        t.ok(dataAsJson.topLevelTag.lowerLevelTag, 'lowerLevelTag is available');
+        t.ok(dataAsJson.topLevelTag.lowerLevelTag.attribute1, 'lowerLevelTag.attribute1 is available');
+        t.ok(dataAsJson.topLevelTag.lowerLevelTag.attribute2, 'lowerLevelTag.attribute2 is available');
+
+        t.end();
     });
 })();
