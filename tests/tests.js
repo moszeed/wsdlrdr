@@ -18,9 +18,19 @@
     }, {
         host: 'webservices.optimalpayments.com',
         wsdl: '/ilsWS/IlsService/v1?wsdl'
+    }, {
+        host: 'svn.apache.org',
+        wsdl: '/repos/asf/airavata/sandbox/xbaya-web/test/Calculator.wsdl'
+    }, {
+        host: 'www.pegelonline.wsv.de',
+        wsdl: '/webservices/version2_4/2009/05/12/PegelonlineWebservice?WSDL'
     }];
 
-    const wsdlOpts = {};
+    const wsdlOpts = {
+        'svn.apache.org': {
+            failOnWrongContentType: false
+        }
+    };
     const wsdlFunctions = [];
 
     var test = require('tape');
@@ -79,6 +89,14 @@
                     t.ok(methodParams.response.find((responseItem) => responseItem.name === 'parameters'), 'got response parameters');
                     t.ok(methodParams.request, `request available`);
                     t.ok(methodParams.request.find((requestItem) => requestItem.name === 'parameters'), 'got request parameters');
+
+                    for (let responseItem of methodParams.response) {
+                        t.ok(responseItem.params, 'got response params');
+                    }
+
+                    for (let requestItem of methodParams.request) {
+                        t.ok(requestItem.params, 'got request params');
+                    }
                 }
             }
 

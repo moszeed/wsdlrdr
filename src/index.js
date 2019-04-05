@@ -168,7 +168,9 @@
             var $methodSchema = $schema.childWithAttribute('name', typeName);
             if ($methodSchema) {
                 if ($methodSchema.children.length === 0) {
-                    return Object.assign({}, returnData, getFormatedAttr($methodSchema.attr));
+                    return Object.assign({
+                        params: []
+                    }, returnData, getFormatedAttr($methodSchema.attr));
                 }
 
                 // is complex type
@@ -195,7 +197,9 @@
             // format message attribute and return this
             //
 
-            return Object.assign({}, returnData, getFormatedAttr($messageChild.attr));
+            return Object.assign({
+                params: []
+            }, returnData, getFormatedAttr($messageChild.attr));
         });
     }
 
