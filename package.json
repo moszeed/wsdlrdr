@@ -6,7 +6,7 @@
   "dependencies": {
     "request": "^2.88.0",
     "xmldoc": "^1.1.2",
-    "deepmerge": "^3.2.0"
+    "deepmerge": "^4.2.2"
   },
   "devDependencies": {
     "tape": "latest",
